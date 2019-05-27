@@ -1,4 +1,4 @@
-package xs.jimmy.app.shbletest;
+package xs.jimmy.app.shbletest.unnecessary;
 
 import java.util.HashMap;
 

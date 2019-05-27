@@ -4,59 +4,75 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity"
-    android:padding="@dimen/padding_16">
+    android:padding="@dimen/padding_16"
+    tools:context=".MainActivity">
 
     <TextView
         android:id="@+id/bluetooth_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/margin_16"
-        android:layout_marginTop="@dimen/margin_16"
         android:text="@string/bluetooth_state"
         android:textSize="@dimen/text_16"
         android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="@+id/bluetooth_switch"
+        app:layout_constraintEnd_toStartOf="@+id/bluetooth_switch"
+        app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="@+id/bluetooth_switch" />
 
-    <Switch
+    <Button
         android:id="@+id/bluetooth_switch"
-        android:layout_width="wrap_content"
+        android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/margin_16"
-        app:layout_constraintStart_toEndOf="@id/bluetooth_label"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
-
-    <TextView
-        android:id="@+id/bluetooth_value"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/margin_16"
-        android:layout_marginTop="25dp"
-        android:text="@string/bluetooth_state"
+        android:text="@string/on"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/bluetooth_label" />
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/bluetooth_label"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <Button
         android:id="@+id/scan"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/start_scanning"
         android:layout_marginTop="@dimen/margin_16"
-        app:layout_constraintStart_toStartOf="parent"
+        android:text="@string/start_scanning"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/bluetooth_value" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/bluetooth_switch" />
+
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/animation_view"
+        android:layout_width="70dp"
+        android:layout_height="70dp"
+        android:visibility="gone"
+        android:layout_marginStart="@dimen/margin_16"
+        app:layout_constraintBottom_toBottomOf="@+id/scan"
+        app:layout_constraintStart_toEndOf="@+id/scan"
+        app:layout_constraintTop_toTopOf="@+id/scan"
+        app:lottie_autoPlay="true"
+        app:lottie_loop="true"
+        app:lottie_rawRes="@raw/data" />
 
     <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/devices_rcv"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:maxHeight="@dimen/height_250"
+        android:layout_height="@dimen/height_150"
         android:layout_marginTop="@dimen/margin_16"
-        app:layout_constraintTop_toBottomOf="@+id/scan"
+        android:scrollbars="vertical"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintTop_toBottomOf="@+id/scan" />
+
+    <com.github.mikephil.charting.charts.BarChart
+        android:id="@+id/chart"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="@dimen/margin_16"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/devices_rcv" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

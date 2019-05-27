@@ -3,4 +3,12 @@
     <string name="location_rationale">Location permission is required for this application to work. Rest assured, it wont be shared</string>
     <string name="bluetooth_state">Bluetooth State</string>
     <string name="start_scanning">start scanning</string>
+    <string name="unknown_device">Unknown Device</string>
+    <string name="turning_on">Turning On..</string>
+    <string name="turning_off">Turning Off..</string>
+    <string name="on">ON</string>
+    <string name="scan">Scan</string>
+    <string name="off">OFF</string>
+    <string name="stop_scanning">Stop Scanning</string>
+    <string name="connect">Connect</string>
 </resources>

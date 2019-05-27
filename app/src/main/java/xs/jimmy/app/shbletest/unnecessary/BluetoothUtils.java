@@ -1,4 +1,4 @@
-package xs.jimmy.app.shbletest;
+package xs.jimmy.app.shbletest.unnecessary;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;

@@ -1,4 +1,4 @@
-package xs.jimmy.app.shbletest;
+package xs.jimmy.app.shbletest.unnecessary;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -34,6 +34,9 @@ import androidx.core.content.ContextCompat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
+import xs.jimmy.app.shbletest.Constants;
+import xs.jimmy.app.shbletest.R;
 
 public class BatteryDetectorActivity extends AppCompatActivity {
 
