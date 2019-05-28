@@ -163,9 +163,9 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     @Override
-    protected void onStop() {
+    protected void onDestroy() {
         mPresenter.stop();
-        super.onStop();
+        super.onDestroy();
     }
 
     @Override
