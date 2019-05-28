@@ -189,4 +189,10 @@ public class MainActivityPresenterTest {
         mPresenter.rationaleDenied();
         verify(mView).showToast("The app won't work well with out location permission!",Toast.LENGTH_LONG);
     }
+
+    @Test
+    public void onConnectionError() {
+        mPresenter.onConnectionError();
+        verify(mView).showToast("Connection Error occured! Please restart bluetooth and try again.",Toast.LENGTH_LONG);
+    }
 }

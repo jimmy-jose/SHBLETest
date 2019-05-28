@@ -20,7 +20,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.content.res.AppCompatResources;
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -66,7 +65,6 @@ public class MainActivity extends AppCompatActivity implements
     private TextView position;
     private LottieAnimationView scanningAnimation;
     private BarChart chart;
-    private ConstraintLayout parent;
 
     private boolean bluetoothEnabled;
     private BluetoothAdapter mBluetoothAdapter;
@@ -143,7 +141,6 @@ public class MainActivity extends AppCompatActivity implements
         chart = findViewById(R.id.chart);
         position = findViewById(R.id.position_value);
         mDisconnect = findViewById(R.id.disconnect);
-        parent = findViewById(R.id.parent);
 
         devicesRCView.setHasFixedSize(true);
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(this);
@@ -237,7 +234,7 @@ public class MainActivity extends AppCompatActivity implements
                 .build();
         List<ScanFilter> filters = new ArrayList<>();
         filters.add(new ScanFilter.Builder().setServiceUuid(new ParcelUuid(DeviceManager.HEARTRATE_MEASUREMENT_SERVICE_UUID)).build());
-        scanner.startScan(null, settings, mScanCallback);
+        scanner.startScan(filters, settings, mScanCallback);
     }
 
     @Override
@@ -271,12 +268,16 @@ public class MainActivity extends AppCompatActivity implements
      */
     @Override
     public void connect(@NonNull final DiscoveredBluetoothDevice device) {
-        mDevice = device.getDevice();
-        if (mDevice != null) {
-            deviceManager.connect(mDevice)
-                    .retry(3, 100)
-                    .useAutoConnect(false)
-                    .enqueue();
+        if(mDisconnect.getVisibility()!=View.VISIBLE){
+            mDevice = device.getDevice();
+            if (mDevice != null) {
+                deviceManager.connect(mDevice)
+                        .retry(3, 100)
+                        .useAutoConnect(false)
+                        .enqueue();
+            }
+        }else{
+            showToast("Please disconnect before connecting to another device.",Toast.LENGTH_LONG);
         }
     }
 
@@ -287,6 +288,9 @@ public class MainActivity extends AppCompatActivity implements
             mDeviceConnect.setEnabled(true);
             mDeviceConnect.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null);
             mDeviceConnect.setText(getApplicationContext().getText(R.string.connect));
+            updateSensorPosition("");
+            i = 0;
+            entries.clear();
             chart.clear();
             if(mDisconnect.getVisibility()==View.VISIBLE)
                 mDisconnect.setVisibility(View.GONE);
@@ -479,6 +483,7 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onError(@NonNull BluetoothDevice device, @NonNull String message, int errorCode) {
         Log.d(TAG, "onError: ");
+        mPresenter.onConnectionError();
     }
 
     @Override

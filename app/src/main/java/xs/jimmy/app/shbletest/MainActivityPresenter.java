@@ -177,4 +177,11 @@ public class MainActivityPresenter implements MainActivityContract.Presenter {
             mView.get().showToast("The app won't work well with out location permission!",Toast.LENGTH_LONG);
         }
     }
+
+    @Override
+    public void onConnectionError() {
+        if(mView.get() != null){
+            mView.get().showToast("Connection Error occured! Please restart bluetooth and try again.",Toast.LENGTH_LONG);
+        }
+    }
 }

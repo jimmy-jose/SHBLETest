@@ -218,5 +218,10 @@ public interface MainActivityContract {
          * Method to notify that the rationale is denied
          */
         void rationaleDenied();
+
+        /**
+         * Method to notify connection error occurred
+         */
+        void onConnectionError();
     }
 }
