@@ -3,7 +3,7 @@ package xs.jimmy.app.shbletest;
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -31,16 +31,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 import no.nordicsemi.android.ble.data.Data;
-import no.nordicsemi.android.log.LogSession;
-import no.nordicsemi.android.log.Logger;
 import no.nordicsemi.android.support.v18.scanner.BluetoothLeScannerCompat;
 import no.nordicsemi.android.support.v18.scanner.ScanCallback;
 import no.nordicsemi.android.support.v18.scanner.ScanResult;
 import no.nordicsemi.android.support.v18.scanner.ScanSettings;
 import pub.devrel.easypermissions.AppSettingsDialog;
 import pub.devrel.easypermissions.EasyPermissions;
-import xs.jimmy.app.shbletest.Model.DiscoveredBluetoothDevice;
-import xs.jimmy.app.shbletest.unnecessary.BluetoothUtils;
+import xs.jimmy.app.shbletest.adapters.DevicesAdapter;
+import xs.jimmy.app.shbletest.interfaces.HeartMonitorBLEManager;
+import xs.jimmy.app.shbletest.interfaces.MainActivityContract;
+import xs.jimmy.app.shbletest.models.DiscoveredBluetoothDevice;
 
 public class MainActivity extends AppCompatActivity implements
         EasyPermissions.PermissionCallbacks,
@@ -51,13 +51,15 @@ public class MainActivity extends AppCompatActivity implements
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
-    private static final int HEART_RATE_MEASUREMENT_VALUE_FORMAT = BluetoothGattCharacteristic.FORMAT_UINT8;
+    public static final int REQUEST_LOCATION_ENABLE_CODE = 101;
+
 
     private DevicesAdapter mAdapter;
 
     private Button bluetoothSwitch;
+    private Button mDeviceConnect;
     private Button scanButton;
-    private LottieAnimationView scaningAnnimation;
+    private LottieAnimationView scaningAnimation;
     private BarChart chart;
 
 
@@ -69,6 +71,12 @@ public class MainActivity extends AppCompatActivity implements
     private ArrayList<DiscoveredBluetoothDevice> mList = new ArrayList<>();
 
     private MainActivityContract.Presenter mPresenter;
+
+    private List<BarEntry> entries = new ArrayList<>();
+
+    private int i = 0;
+
+
 
 
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
@@ -140,7 +148,7 @@ public class MainActivity extends AppCompatActivity implements
         RecyclerView devicesRCView = findViewById(R.id.devices_rcv);
         bluetoothSwitch = findViewById(R.id.bluetooth_switch);
         scanButton = findViewById(R.id.scan);
-        scaningAnnimation = findViewById(R.id.animation_view);
+        scaningAnimation = findViewById(R.id.animation_view);
         chart = findViewById(R.id.chart);
 
         devicesRCView.setHasFixedSize(true);
@@ -184,7 +192,10 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public boolean getBluetoothState() {
-        mBluetoothAdapter = BluetoothUtils.getBluetoothAdapter(this);
+        if(mBluetoothAdapter == null) {
+            BluetoothManager mBluetoothManager = (BluetoothManager) getApplicationContext().getSystemService(Context.BLUETOOTH_SERVICE);
+            mBluetoothAdapter = mBluetoothManager.getAdapter();
+        }
         return mBluetoothAdapter.isEnabled();
     }
 
@@ -212,8 +223,7 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void startScanningForDevices() {
         scanButton.setText(getApplicationContext().getString(R.string.stop_scanning));
-        addDummyData();
-        scaningAnnimation.setVisibility(View.VISIBLE);
+        scaningAnimation.setVisibility(View.VISIBLE);
         BluetoothLeScannerCompat scanner = BluetoothLeScannerCompat.getScanner();
         ScanSettings settings = new ScanSettings.Builder()
                 .setLegacy(false)
@@ -230,7 +240,7 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void stopScanningForDevices(){
         scanButton.setText(getApplicationContext().getString(R.string.scan));
-        scaningAnnimation.setVisibility(View.INVISIBLE);
+        scaningAnimation.setVisibility(View.INVISIBLE);
         BluetoothLeScannerCompat scanner = BluetoothLeScannerCompat.getScanner();
         scanner.stopScan(mScanCallback);
     }
@@ -264,7 +274,7 @@ public class MainActivity extends AppCompatActivity implements
         } else {
             // Do not have permissions, request them now
             EasyPermissions.requestPermissions(this, getString(R.string.location_rationale),
-                    Constants.REQUEST_LOCATION_ENABLE_CODE, perms);
+                    REQUEST_LOCATION_ENABLE_CODE, perms);
         }
     }
 
@@ -323,7 +333,8 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     @Override
-    public void onItemClick(@NonNull DiscoveredBluetoothDevice device) {
+    public void onItemClick(Button mConnect, @NonNull DiscoveredBluetoothDevice device) {
+        mDeviceConnect = mConnect;
         mPresenter.onItemClicked(device,scanButton.getText().equals(getApplicationContext().getString(R.string.stop_scanning)));
     }
 
@@ -332,14 +343,8 @@ public class MainActivity extends AppCompatActivity implements
      */
     @Override
     public void connect(@NonNull final DiscoveredBluetoothDevice device) {
-        // Prevent from calling again when called again (screen orientation changed)
-//        if (mDevice == null) {
-            mDevice = device.getDevice();
-            final LogSession logSession
-                    = Logger.newSession(getApplication(), null, device.getAddress(), device.getName());
-            deviceManager.setLogger(logSession);
-            reconnect();
-//        }
+        mDevice = device.getDevice();
+        reconnect();
     }
 
     /**
@@ -356,24 +361,15 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
-    private void addDummyData(){
-        ArrayList<Integer> arrayList = new ArrayList<>();
-        arrayList.add(10);
-        arrayList.add(20);
-        arrayList.add(30);
-        arrayList.add(40);
-        arrayList.add(50);
-        arrayList.add(60);
+    private  void disconnect(){
+        if(mDevice != null)
+            deviceManager.disconnect();
+    }
 
-        List<BarEntry> entries = new ArrayList<>();
-
-        for (int i = 0; i < arrayList.size(); i++) {
-            int a = arrayList.get(i);
-            entries.add(new BarEntry(i, a));
-        }
-
-        BarDataSet barDataSet = new BarDataSet(entries,"dummy data");
-
+    @Override
+    public void updateChartData(int value){
+        entries.add(new BarEntry(i++, value));
+        BarDataSet barDataSet = new BarDataSet(entries,"Heart rate data");
         BarData barData = new BarData(barDataSet);
         chart.setData(barData);
         chart.invalidate(); // refresh
@@ -387,11 +383,19 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onDeviceConnecting(@NonNull BluetoothDevice device) {
         Log.d(TAG, "onDeviceConnecting: ");
+        mDeviceConnect.setText("Connecting");
+
     }
 
     @Override
     public void onDeviceConnected(@NonNull BluetoothDevice device) {
         Log.d(TAG, "onDeviceConnected: ");
+        mDeviceConnect.setText("Connected");
+        mDeviceConnect.setEnabled(false);
+        mDeviceConnect.setCompoundDrawablesWithIntrinsicBounds(
+                AppCompatResources.getDrawable(getApplicationContext(),R.drawable.ic_bluetooth_blue_24dp)
+                , null, null, null);
+        mPresenter.connectedToDevice();
     }
 
     @Override
@@ -446,7 +450,11 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void onDataReceived(@NonNull BluetoothDevice device, @NonNull Data data) {
-        Log.d(TAG, "onDataReceived: "+ data.getIntValue(Data.FORMAT_UINT8,1));
+        Log.d(TAG, "onDataReceived: "+ data.getIntValue(Data.FORMAT_UINT8,1)+"v "+data.getIntValue(Data.FORMAT_UINT8,0));
+
+        Integer value = data.getIntValue(Data.FORMAT_UINT8,1);
+        if(value!=null)
+            mPresenter.onDataReceived(value);
     }
     //endregion
 }

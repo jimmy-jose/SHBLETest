@@ -1,4 +1,4 @@
-package xs.jimmy.app.shbletest.Model;
+package xs.jimmy.app.shbletest.models;
 
 import android.bluetooth.BluetoothDevice;
 

@@ -1,10 +1,8 @@
-package xs.jimmy.app.shbletest;
-
-import android.content.Context;
+package xs.jimmy.app.shbletest.interfaces;
 
 import androidx.annotation.NonNull;
 
-import xs.jimmy.app.shbletest.Model.DiscoveredBluetoothDevice;
+import xs.jimmy.app.shbletest.models.DiscoveredBluetoothDevice;
 
 public interface MainActivityContract {
     interface View {
@@ -33,6 +31,8 @@ public interface MainActivityContract {
 
         boolean isGPSTurnedOn();
 
+        void updateChartData(int value);
+
         void showToast(String text, int duration);
     }
 
@@ -52,5 +52,9 @@ public interface MainActivityContract {
         void onItemClicked(DiscoveredBluetoothDevice device, boolean isScanning);
 
         void locationPermissionGranted();
+
+        void onDataReceived(int value);
+
+        void connectedToDevice();
     }
 }

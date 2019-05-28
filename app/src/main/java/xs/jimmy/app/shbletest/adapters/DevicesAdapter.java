@@ -1,4 +1,4 @@
-package xs.jimmy.app.shbletest;
+package xs.jimmy.app.shbletest.adapters;
 
 import android.content.Context;
 import android.text.TextUtils;
@@ -14,7 +14,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 
-import xs.jimmy.app.shbletest.Model.DiscoveredBluetoothDevice;
+import xs.jimmy.app.shbletest.MainActivity;
+import xs.jimmy.app.shbletest.R;
+import xs.jimmy.app.shbletest.models.DiscoveredBluetoothDevice;
 
 public class DevicesAdapter extends RecyclerView.Adapter<DevicesAdapter.ViewHolder> {
     private final Context mContext;
@@ -23,10 +25,10 @@ public class DevicesAdapter extends RecyclerView.Adapter<DevicesAdapter.ViewHold
 
     @FunctionalInterface
     public interface OnItemClickListener {
-        void onItemClick(@NonNull final DiscoveredBluetoothDevice device);
+        void onItemClick(Button mConnect, @NonNull final DiscoveredBluetoothDevice device);
     }
 
-    DevicesAdapter(@NonNull final MainActivity activity,
+    public DevicesAdapter(@NonNull final MainActivity activity,
                    @NonNull List<DiscoveredBluetoothDevice> mDevices) {
         mContext = activity;
         mOnItemClickListener = activity;
@@ -65,7 +67,7 @@ public class DevicesAdapter extends RecyclerView.Adapter<DevicesAdapter.ViewHold
 
     }
 
-    void setmDevices(List<DiscoveredBluetoothDevice> mDevices) {
+    public void setmDevices(List<DiscoveredBluetoothDevice> mDevices) {
         this.mDevices.clear();
         this.mDevices.addAll(mDevices);
         notifyDataSetChanged();
@@ -82,7 +84,7 @@ public class DevicesAdapter extends RecyclerView.Adapter<DevicesAdapter.ViewHold
             mConnect = view.findViewById(R.id.connectButton);
             mConnect.setOnClickListener(v -> {
                 if (mOnItemClickListener != null) {
-                    mOnItemClickListener.onItemClick(mDevices.get(getAdapterPosition()));
+                    mOnItemClickListener.onItemClick(mConnect,mDevices.get(getAdapterPosition()));
                 }
             });
         }

@@ -7,24 +7,27 @@ import android.bluetooth.BluetoothGattService;
 import android.content.Context;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import java.util.UUID;
 
 import no.nordicsemi.android.ble.BleManager;
 import no.nordicsemi.android.ble.BleManagerCallbacks;
 import no.nordicsemi.android.ble.data.Data;
-import no.nordicsemi.android.log.LogSession;
+import xs.jimmy.app.shbletest.interfaces.BodySensorCallback;
+import xs.jimmy.app.shbletest.interfaces.HeartDataCallback;
+import xs.jimmy.app.shbletest.interfaces.HeartMonitorBLEManager;
 
 public class DeviceManager extends BleManager<HeartMonitorBLEManager> {
-    private LogSession mLogSession;
-    private BluetoothGattCharacteristic mHeartRateCharacteristic;
+    private BluetoothGattCharacteristic mHeartRateCharacteristic,mBodySensorCharacteristic;
 
-    private final static UUID HMC = UUID
+    private final static UUID HEARTRATE_MEASUREMENT_UUID = UUID
             .fromString("00002A37-0000-1000-8000-00805f9b34fb");
 
-    public final static UUID HMS = UUID
+    public final static UUID HEARTRATE_MEASUREMENT_SERVICE_UUID = UUID
             .fromString("0000180D-0000-1000-8000-00805f9b34fb");
+
+    private static final UUID BODY_SENSOR_LOCATION_UUID = UUID
+            .fromString("00002A38-0000-1000-8000-00805f9b34fb");
 
     private final BleManagerGattCallback mGattCallback = new BleManagerGattCallback() {
         @Override
@@ -32,28 +35,32 @@ public class DeviceManager extends BleManager<HeartMonitorBLEManager> {
             setNotificationCallback(mHeartRateCharacteristic).with(heartDataCallback);
             readCharacteristic(mHeartRateCharacteristic).with(heartDataCallback).enqueue();
             enableNotifications(mHeartRateCharacteristic).enqueue();
+
+            setNotificationCallback(mBodySensorCharacteristic).with(bodySensorCallback);
+            readCharacteristic(mBodySensorCharacteristic).with(bodySensorCallback).enqueue();
+            enableNotifications(mBodySensorCharacteristic).enqueue();
         }
 
         @Override
         protected boolean isRequiredServiceSupported(@NonNull BluetoothGatt gatt) {
-            final BluetoothGattService service = gatt.getService(HMS);
+            final BluetoothGattService service = gatt.getService(HEARTRATE_MEASUREMENT_SERVICE_UUID);
             if (service != null) {
-                mHeartRateCharacteristic = service.getCharacteristic(HMC);
-
+                mHeartRateCharacteristic = service.getCharacteristic(HEARTRATE_MEASUREMENT_UUID);
+                mBodySensorCharacteristic = service.getCharacteristic(BODY_SENSOR_LOCATION_UUID);
             }
-
-//            boolean writeRequest = false;
-//            if (mLedCharacteristic != null) {
-//                final int rxProperties = mLedCharacteristic.getProperties();
-//                writeRequest = (rxProperties & BluetoothGattCharacteristic.PROPERTY_WRITE) > 0;
-//            }
-
-            return mHeartRateCharacteristic != null;
+            return mHeartRateCharacteristic != null && mBodySensorCharacteristic != null;
         }
 
         @Override
         protected void onDeviceDisconnected() {
 
+        }
+    };
+
+    private BodySensorCallback bodySensorCallback = new BodySensorCallback() {
+        @Override
+        public void onDataReceived(@NonNull BluetoothDevice device, @NonNull Data data) {
+            mCallbacks.onDataReceived(device,data);
         }
     };
 
@@ -83,12 +90,5 @@ public class DeviceManager extends BleManager<HeartMonitorBLEManager> {
     }
 
 
-    /**
-     * Sets the log session to be used for low level logging.
-     * @param session the session, or null, if nRF Logger is not installed.
-     */
-    public void setLogger(@Nullable final LogSession session) {
-        this.mLogSession = session;
-    }
 
 }

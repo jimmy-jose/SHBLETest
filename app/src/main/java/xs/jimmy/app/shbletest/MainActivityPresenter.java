@@ -1,14 +1,13 @@
 package xs.jimmy.app.shbletest;
 
-import android.content.Context;
-import android.provider.Settings;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
 import java.lang.ref.WeakReference;
 
-import xs.jimmy.app.shbletest.Model.DiscoveredBluetoothDevice;
+import xs.jimmy.app.shbletest.interfaces.MainActivityContract;
+import xs.jimmy.app.shbletest.models.DiscoveredBluetoothDevice;
 
 public class MainActivityPresenter implements MainActivityContract.Presenter {
 
@@ -77,6 +76,19 @@ public class MainActivityPresenter implements MainActivityContract.Presenter {
         }
     }
 
+    @Override
+    public void onDataReceived(int value) {
+        if(mView.get()!=null){
+            mView.get().updateChartData(value);
+        }
+    }
+
+    @Override
+    public void connectedToDevice() {
+        if(mView.get() != null){
+            mView.get().showToast("Connected to device",Toast.LENGTH_LONG);
+        }
+    }
 
 
     @Override
