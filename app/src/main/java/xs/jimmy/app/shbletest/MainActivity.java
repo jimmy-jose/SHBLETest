@@ -9,15 +9,18 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.os.ParcelUuid;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.content.res.AppCompatResources;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -33,6 +36,7 @@ import java.util.List;
 import no.nordicsemi.android.ble.data.Data;
 import no.nordicsemi.android.support.v18.scanner.BluetoothLeScannerCompat;
 import no.nordicsemi.android.support.v18.scanner.ScanCallback;
+import no.nordicsemi.android.support.v18.scanner.ScanFilter;
 import no.nordicsemi.android.support.v18.scanner.ScanResult;
 import no.nordicsemi.android.support.v18.scanner.ScanSettings;
 import pub.devrel.easypermissions.AppSettingsDialog;
@@ -41,6 +45,7 @@ import xs.jimmy.app.shbletest.adapters.DevicesAdapter;
 import xs.jimmy.app.shbletest.interfaces.HeartMonitorBLEManager;
 import xs.jimmy.app.shbletest.interfaces.MainActivityContract;
 import xs.jimmy.app.shbletest.models.DiscoveredBluetoothDevice;
+import xs.jimmy.app.shbletest.utils.DeviceManager;
 
 public class MainActivity extends AppCompatActivity implements
         EasyPermissions.PermissionCallbacks,
@@ -53,15 +58,15 @@ public class MainActivity extends AppCompatActivity implements
 
     public static final int REQUEST_LOCATION_ENABLE_CODE = 101;
 
-
     private DevicesAdapter mAdapter;
-
     private Button bluetoothSwitch;
     private Button mDeviceConnect;
+    private Button mDisconnect;
     private Button scanButton;
-    private LottieAnimationView scaningAnimation;
+    private TextView position;
+    private LottieAnimationView scanningAnimation;
     private BarChart chart;
-
+    private ConstraintLayout parent;
 
     private boolean bluetoothEnabled;
     private BluetoothAdapter mBluetoothAdapter;
@@ -76,9 +81,6 @@ public class MainActivity extends AppCompatActivity implements
 
     private int i = 0;
 
-
-
-
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -90,23 +92,19 @@ public class MainActivity extends AppCompatActivity implements
                 switch (state) {
                     case BluetoothAdapter.STATE_OFF:
                         // Bluetooth has been turned off;
-                        bluetoothSwitch.setEnabled(true);
-                        setBluetoothDisabled();
+                        mPresenter.notifyBluetoothDisabled();
                         break;
                     case BluetoothAdapter.STATE_TURNING_OFF:
                         // Bluetooth is turning off;
-                        bluetoothSwitch.setEnabled(false);
-                        bluetoothSwitch.setText(getApplicationContext().getString(R.string.turning_off));
+                        mPresenter.notiyBluetoothTurningOff();
                         break;
                     case BluetoothAdapter.STATE_ON:
                         // Bluetooth has been on
-                        bluetoothSwitch.setEnabled(true);
-                        setBluetoothenabled();
+                        mPresenter.notifyBluetoothEnabled();
                         break;
                     case BluetoothAdapter.STATE_TURNING_ON:
                         // Bluetooth is turning on
-                        bluetoothSwitch.setEnabled(false);
-                        bluetoothSwitch.setText(getApplicationContext().getString(R.string.turning_on));
+                        mPresenter.notifyBluetoothTurningOn();
                         break;
                 }
             }
@@ -121,14 +119,7 @@ public class MainActivity extends AppCompatActivity implements
 
         @Override
         public void onBatchScanResults(@NonNull List<ScanResult> results) {
-            if (results.isEmpty())
-                return;
-            mList.clear();
-            for(ScanResult result: results){
-                mList.add(new DiscoveredBluetoothDevice(result));
-            }
-            mAdapter.setmDevices(mList);
-            Log.d(TAG, "onBatchScanResults: "+results.toString());
+            mPresenter.onBatchScanResult(results);
         }
 
         @Override
@@ -148,8 +139,11 @@ public class MainActivity extends AppCompatActivity implements
         RecyclerView devicesRCView = findViewById(R.id.devices_rcv);
         bluetoothSwitch = findViewById(R.id.bluetooth_switch);
         scanButton = findViewById(R.id.scan);
-        scaningAnimation = findViewById(R.id.animation_view);
+        scanningAnimation = findViewById(R.id.animation_view);
         chart = findViewById(R.id.chart);
+        position = findViewById(R.id.position_value);
+        mDisconnect = findViewById(R.id.disconnect);
+        parent = findViewById(R.id.parent);
 
         devicesRCView.setHasFixedSize(true);
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(this);
@@ -167,10 +161,18 @@ public class MainActivity extends AppCompatActivity implements
         scanButton.setOnClickListener(v ->
                 mPresenter.scanClicked(scanButton.getText().equals(getApplicationContext().getString(R.string.stop_scanning))));
 
+        mDisconnect.setOnClickListener(v -> mPresenter.disconnectClicked());
+
     }
 
     @Override
-    public void registerBluetoothBroadcastReciever(){
+    protected void onStop() {
+        mPresenter.stop();
+        super.onStop();
+    }
+
+    @Override
+    public void registerBluetoothBroadcastReceiver(){
         IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
         registerReceiver(mReceiver, filter);
     }
@@ -200,7 +202,8 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     @Override
-    public void setBluetoothenabled(){
+    public void setBluetoothEnabled(){
+        bluetoothSwitch.setEnabled(true);
         bluetoothEnabled = true;
         bluetoothSwitch.setText(getApplicationContext().getString(R.string.on));
         bluetoothSwitch.setCompoundDrawablesWithIntrinsicBounds(
@@ -212,6 +215,7 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void setBluetoothDisabled(){
+        bluetoothSwitch.setEnabled(true);
         bluetoothEnabled = false;
         bluetoothSwitch.setText(getApplicationContext().getString(R.string.off));
         bluetoothSwitch.setCompoundDrawablesWithIntrinsicBounds(
@@ -223,32 +227,25 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void startScanningForDevices() {
         scanButton.setText(getApplicationContext().getString(R.string.stop_scanning));
-        scaningAnimation.setVisibility(View.VISIBLE);
+        scanningAnimation.setVisibility(View.VISIBLE);
         BluetoothLeScannerCompat scanner = BluetoothLeScannerCompat.getScanner();
         ScanSettings settings = new ScanSettings.Builder()
                 .setLegacy(false)
                 .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-                .setReportDelay(500)
+                .setReportDelay(1000)
                 .setUseHardwareBatchingIfSupported(false)
                 .build();
-//        List<ScanFilter> filters = new ArrayList<>();
-//        filters.add(new ScanFilter.Builder().setServiceUuid(scanUUID).build());
+        List<ScanFilter> filters = new ArrayList<>();
+        filters.add(new ScanFilter.Builder().setServiceUuid(new ParcelUuid(DeviceManager.HEARTRATE_MEASUREMENT_SERVICE_UUID)).build());
         scanner.startScan(null, settings, mScanCallback);
-
     }
 
     @Override
     public void stopScanningForDevices(){
         scanButton.setText(getApplicationContext().getString(R.string.scan));
-        scaningAnimation.setVisibility(View.INVISIBLE);
+        scanningAnimation.setVisibility(View.INVISIBLE);
         BluetoothLeScannerCompat scanner = BluetoothLeScannerCompat.getScanner();
         scanner.stopScan(mScanCallback);
-    }
-
-    @Override
-    protected void onStop() {
-        mPresenter.stop();
-        super.onStop();
     }
 
     @Override
@@ -261,6 +258,89 @@ public class MainActivity extends AppCompatActivity implements
         bluetoothSwitch.setEnabled(false);
         bluetoothSwitch.setText(getApplicationContext().getString(R.string.turning_on));
         mBluetoothAdapter.enable();
+    }
+
+    @Override
+    public void onItemClick(Button mConnect, @NonNull DiscoveredBluetoothDevice device) {
+        mDeviceConnect = mConnect;
+        mPresenter.onItemClicked(device,scanButton.getText().equals(getApplicationContext().getString(R.string.stop_scanning)));
+    }
+
+    /**
+     * Connect to peripheral.
+     */
+    @Override
+    public void connect(@NonNull final DiscoveredBluetoothDevice device) {
+        mDevice = device.getDevice();
+        if (mDevice != null) {
+            deviceManager.connect(mDevice)
+                    .retry(3, 100)
+                    .useAutoConnect(false)
+                    .enqueue();
+        }
+    }
+
+    @Override
+    public void disconnect(){
+        if(mDevice != null) {
+            deviceManager.disconnect().enqueue();
+            mDeviceConnect.setEnabled(true);
+            mDeviceConnect.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null);
+            mDeviceConnect.setText(getApplicationContext().getText(R.string.connect));
+            chart.clear();
+            if(mDisconnect.getVisibility()==View.VISIBLE)
+                mDisconnect.setVisibility(View.GONE);
+        }
+    }
+
+    @Override
+    public void setBluetoothTurningOff() {
+        bluetoothSwitch.setEnabled(false);
+        bluetoothSwitch.setEnabled(false);
+        bluetoothSwitch.setText(getApplicationContext().getString(R.string.turning_off));
+    }
+
+    @Override
+    public void setBluetoothTurningOn() {
+        bluetoothSwitch.setEnabled(false);
+        bluetoothSwitch.setText(getApplicationContext().getString(R.string.turning_on));
+    }
+
+    @Override
+    public void updateRecyclerView(List<ScanResult> results) {
+        if (results.isEmpty())
+            return;
+        mList.clear();
+        for(ScanResult result: results){
+            mList.add(new DiscoveredBluetoothDevice(result));
+        }
+        mAdapter.setmDevices(mList);
+        Log.d(TAG, "onBatchScanResults: "+results.toString());
+    }
+
+    @Override
+    public boolean isLocationPermissionGiven() {
+        String[] perms = {Manifest.permission.ACCESS_FINE_LOCATION};
+        return EasyPermissions.hasPermissions(this, perms);
+    }
+
+    @Override
+    public void showDisconnect() {
+        mDisconnect.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    public void updateChartData(int value){
+        entries.add(new BarEntry(i++, value));
+        BarDataSet barDataSet = new BarDataSet(entries,"Heart rate data");
+        BarData barData = new BarData(barDataSet);
+        chart.setData(barData);
+        chart.invalidate(); // refresh
+    }
+
+    @Override
+    public void showToast(String var1, int var3) {
+        Toast.makeText(getApplicationContext(),var1,var3).show();
     }
 
     //region Location Permission
@@ -280,7 +360,7 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public boolean isGPSTurnedOn() {
-        int locationMode = 0;
+        int locationMode;
         //Equal or higher than API 19/KitKat
         try {
             locationMode = Settings.Secure.getInt(getApplicationContext().getContentResolver(), Settings.Secure.LOCATION_MODE);
@@ -328,73 +408,31 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void onRationaleDenied(int requestCode) {
-        Log.d(TAG, "onRationaleDenied: ");
-        getLocationPermission();
+        mPresenter.rationaleDenied();
     }
+    //endregion
 
     @Override
-    public void onItemClick(Button mConnect, @NonNull DiscoveredBluetoothDevice device) {
-        mDeviceConnect = mConnect;
-        mPresenter.onItemClicked(device,scanButton.getText().equals(getApplicationContext().getString(R.string.stop_scanning)));
-    }
-
-    /**
-     * Connect to peripheral.
-     */
-    @Override
-    public void connect(@NonNull final DiscoveredBluetoothDevice device) {
-        mDevice = device.getDevice();
-        reconnect();
-    }
-
-    /**
-     * Reconnects to previously connected device.
-     * If this device was not supported, its services were cleared on disconnection, so
-     * reconnection may help.
-     */
-    private void reconnect() {
-        if (mDevice != null) {
-            deviceManager.connect(mDevice)
-                    .retry(3, 100)
-                    .useAutoConnect(false)
-                    .enqueue();
-        }
-    }
-
-    private  void disconnect(){
-        if(mDevice != null)
-            deviceManager.disconnect();
-    }
-
-    @Override
-    public void updateChartData(int value){
-        entries.add(new BarEntry(i++, value));
-        BarDataSet barDataSet = new BarDataSet(entries,"Heart rate data");
-        BarData barData = new BarData(barDataSet);
-        chart.setData(barData);
-        chart.invalidate(); // refresh
-    }
-
-    @Override
-    public void showToast(String var1, int var3) {
-        Toast.makeText(getApplicationContext(),var1,var3).show();
+    public void updateSensorPosition(String text) {
+        position.setText(text);
     }
 
     @Override
     public void onDeviceConnecting(@NonNull BluetoothDevice device) {
         Log.d(TAG, "onDeviceConnecting: ");
-        mDeviceConnect.setText("Connecting");
+        mDeviceConnect.setText(getApplicationContext().getString(R.string.connecting));
 
     }
 
     @Override
     public void onDeviceConnected(@NonNull BluetoothDevice device) {
         Log.d(TAG, "onDeviceConnected: ");
-        mDeviceConnect.setText("Connected");
+        mDeviceConnect.setText(getApplicationContext().getString(R.string.connected));
         mDeviceConnect.setEnabled(false);
         mDeviceConnect.setCompoundDrawablesWithIntrinsicBounds(
-                AppCompatResources.getDrawable(getApplicationContext(),R.drawable.ic_bluetooth_blue_24dp)
+                AppCompatResources.getDrawable(getApplicationContext(),R.drawable.ic_check_circle_blue_24dp)
                 , null, null, null);
+
         mPresenter.connectedToDevice();
     }
 
@@ -449,12 +487,18 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     @Override
-    public void onDataReceived(@NonNull BluetoothDevice device, @NonNull Data data) {
-        Log.d(TAG, "onDataReceived: "+ data.getIntValue(Data.FORMAT_UINT8,1)+"v "+data.getIntValue(Data.FORMAT_UINT8,0));
+    public void updateBodySensorPosition(BluetoothDevice device, Data data) {
+        Integer value = data.getIntValue(Data.FORMAT_UINT8,0);
+        if(value != null)
+            mPresenter.onSensorPositionDataReceived(value);
+    }
+
+    @Override
+    public void updateHeartRateData(BluetoothDevice device, Data data) {
+        Log.d(TAG, "onHeartRateDataReceived: "+ data.getIntValue(Data.FORMAT_UINT8,1)+"v "+data.getIntValue(Data.FORMAT_UINT8,0));
 
         Integer value = data.getIntValue(Data.FORMAT_UINT8,1);
-        if(value!=null)
-            mPresenter.onDataReceived(value);
+        if(value != null)
+            mPresenter.onHeartRateDataReceived(value);
     }
-    //endregion
 }

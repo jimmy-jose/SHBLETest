@@ -1,4 +1,4 @@
-package xs.jimmy.app.shbletest;
+package xs.jimmy.app.shbletest.utils;
 
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
@@ -13,8 +13,8 @@ import java.util.UUID;
 import no.nordicsemi.android.ble.BleManager;
 import no.nordicsemi.android.ble.BleManagerCallbacks;
 import no.nordicsemi.android.ble.data.Data;
-import xs.jimmy.app.shbletest.interfaces.BodySensorCallback;
-import xs.jimmy.app.shbletest.interfaces.HeartDataCallback;
+import xs.jimmy.app.shbletest.abstracts.BodySensorDataCallback;
+import xs.jimmy.app.shbletest.abstracts.HeartRateSensorDataCallback;
 import xs.jimmy.app.shbletest.interfaces.HeartMonitorBLEManager;
 
 public class DeviceManager extends BleManager<HeartMonitorBLEManager> {
@@ -57,17 +57,17 @@ public class DeviceManager extends BleManager<HeartMonitorBLEManager> {
         }
     };
 
-    private BodySensorCallback bodySensorCallback = new BodySensorCallback() {
+    private BodySensorDataCallback bodySensorCallback = new BodySensorDataCallback() {
         @Override
-        public void onDataReceived(@NonNull BluetoothDevice device, @NonNull Data data) {
-            mCallbacks.onDataReceived(device,data);
+        public void updateBodySensorPosition(BluetoothDevice device, Data data) {
+            mCallbacks.updateBodySensorPosition(device,data);
         }
     };
 
-    private HeartDataCallback heartDataCallback = new HeartDataCallback() {
+    private HeartRateSensorDataCallback heartDataCallback = new HeartRateSensorDataCallback() {
         @Override
-        public void onDataReceived(@NonNull BluetoothDevice device, @NonNull Data data) {
-            mCallbacks.onDataReceived(device,data);
+        public void updateHeartRateData(BluetoothDevice device, Data data) {
+            mCallbacks.updateHeartRateData(device,data);
         }
     };
     /**

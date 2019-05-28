@@ -7,15 +7,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:lines="1"
-        android:text="name"/>
+        android:lines="1" />
     <TextView
         android:id="@+id/device_address"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:lines="1"
-        android:text="address"/>
+        android:lines="1" />
     <Button
         android:id="@+id/connectButton"
         android:layout_width="match_parent"

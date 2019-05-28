@@ -11,4 +11,8 @@
     <string name="off">OFF</string>
     <string name="stop_scanning">Stop Scanning</string>
     <string name="connect">Connect</string>
+    <string name="sensor_position">Sensor Position :</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="connecting">Connecting</string>
+    <string name="connected">Connected</string>
 </resources>
